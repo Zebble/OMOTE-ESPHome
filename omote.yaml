@@ -1,0 +1,178 @@
+esphome:
+  name: omote-test
+  friendly_name: omote-test
+  on_boot:
+    # Required to set lcd_rd off before display will work
+    - priority: 600
+      then:
+        - output.turn_off: lcd_rd
+
+external_components:
+  # Modified version of evil-dog's tca8418 component, to extend usable key codes
+  #- source: github://evil-dog/esphome-tca8418@main
+  - source: github://Zebble/esphome-tca8418@main
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Omote-Test Fallback Hotspot"
+    password: !secret hotspot_password
+
+web_server:
+  port: 80
+
+psram:
+
+i2c:
+  sda: GPIO20
+  scl: GPIO19
+  # Pullups are provided by hardware
+  sda_pullup_enabled: False
+  scl_pullup_enabled: False
+  scan: true
+
+# the interrupt_pin is required.
+tca8418:
+  - address: 0x34
+    interrupt_pin: GPIO08
+
+output:
+  # LCD Backlight GPIO
+  - platform: ledc
+    id: gpio_09
+    pin:
+      number: GPIO09
+      inverted: true
+  # Keypad Backlight GPIO
+  - platform: ledc
+    id: gpio_46
+    pin:
+      number: GPIO46
+      inverted: False
+  - platform: gpio
+    # lcd_rd pin needs to be set HIGH before LCD will work.
+    # Set HIGH (turn off) with boot priority in esphome section.
+    id: lcd_rd
+    pin:
+      number: GPIO42
+      inverted: True
+
+light:
+  - platform: monochromatic
+    output: gpio_09
+    restore_mode: RESTORE_DEFAULT_OFF
+    name: "LCD Backlight"
+  - platform: monochromatic
+    output: gpio_46
+    restore_mode: RESTORE_DEFAULT_OFF
+    name: "Keypad Backlight"
+
+button:
+  - platform: restart
+    name: "Restart"
+
+touchscreen:
+  - platform: ft63x6
+    transform:
+      mirror_x: True
+      mirror_y: True
+
+binary_sensor:
+  - platform: gpio
+    name: "Battery Charging"
+    pin:
+      number: GPIO01
+      inverted: True
+      mode:
+        input: True
+        pullup: True
+    filters:
+      - delayed_off: 1s
+
+  # Keypad
+  - platform: tca8418
+    id: s17
+    key: 51
+    name: "Power"
+  - platform: tca8418
+    id: s25
+    key: 5
+    name: "Stop"
+  - platform: tca8418
+    id: s24
+    key: 4
+    name: "Rewind"
+  - platform: tca8418
+    id: s22
+    key: 2
+    name: "Play"
+  - platform: tca8418
+    id: s16
+    key: 11
+    name: "Fast Forward"
+
+spi:
+  - id: quad_spi_bus
+    type: octal
+    clk_pin:
+      number: GPIO41
+    data_pins:
+      - GPIO48
+      - GPIO47
+      - GPIO21
+      - GPIO14
+      - GPIO13
+      - GPIO12
+      - GPIO11
+      - GPIO10
+
+display:
+  - platform: mipi_spi
+    model: ILI9341
+    bus_mode: octal
+    dc_pin: GPIO40
+    cs_pin: GPIO39
+    enable_pin:
+      number: GPIO38
+      inverted: true
+    auto_clear_enabled: false
+    update_interval: never
+    data_rate: 40MHz
+
+lvgl:
+
+switch:
+  # IR Receiver power
+  - platform: gpio
+    name: "IR Receiver Power"
+    pin:
+      number: GPIO06
+    restore_mode: ALWAYS_OFF
+
+remote_receiver:
+  pin: GPIO04
+  dump: all
+
+remote_transmitter:
+  pin: GPIO05
+  carrier_duty_percent: 50%
+
