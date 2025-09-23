@@ -1,12 +1,12 @@
 # OMOTE-ESPHome
 ESPHome implementation for the ESP32-based OMOTE Remote Control
 
-[x] ESPHome 2025.9.x
+- [x] ESPHome 2025.9.x
 
 Hardware Support:
-[ ] Rev1
-[x] Rev5
-[ ] Rev5-3661
+- [ ] Rev1
+- [x] Rev5
+- [ ] Rev5-3661
 
 Components:
 [x] Display using mipi_spi
