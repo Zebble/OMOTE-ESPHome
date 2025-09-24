@@ -108,7 +108,7 @@ binary_sensor:
     filters:
       - delayed_off: 1s
 
-  # Keypad
+  # Physical Keypad
   - platform: tca8418
     id: s17
     key: 51
@@ -159,6 +159,84 @@ display:
     data_rate: 40MHz
 
 lvgl:
+  pages:
+    - id: keypad_page
+      widgets:
+        - buttonmatrix:
+            id: lvgl_keypad
+            x: 0
+            y: 0
+            width: 240
+            height: 320
+            items:
+              pressed:
+                bg_color: 0xFFFF00
+            rows:
+              - buttons:
+                  - text: 1
+                    control:
+                      no_repeat: true
+                  - text: 2
+                    control:
+                      no_repeat: true
+                  - text: 3
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: 4
+                    control:
+                      no_repeat: true
+                  - text: 5
+                    control:
+                      no_repeat: true
+                  - text: 6
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: 7
+                    control:
+                      no_repeat: true
+                  - text: 8
+                    control:
+                      no_repeat: true
+                  - text: 9
+                    control:
+                      no_repeat: true
+              - buttons:
+                  - text: "\uF55A"
+                    key_code: "*"
+                    control:
+                      no_repeat: true
+                  - text: 0
+                    control:
+                      no_repeat: true
+                  - text: "\uF00C"
+                    key_code: "#"
+                    control:
+                      no_repeat: true
+            on_press: # Triggers for the matrix, to determine which button was pressed.
+              then:
+                - logger.log:
+                    format: "Matrix button pressed: %d"
+                    args: ["x"]  # If x is 65535, it was the container, (or through a disabled button).
+                - lambda: |-
+                    // Handle each button
+                    switch (x) {
+                      case 0:
+                        break;
+                      case 1:
+                        break;
+                      case 2:
+                        break;
+                      default:
+                        break;
+                    }
+                    ESP_LOGD("custom","Button pressed: %d",x);
+                - remote_transmitter.transmit_nec:
+                    address: 0x1234
+                    command: 0x78AB
+                    command_repeats: 1
+
 
 switch:
   # IR Receiver power
@@ -169,10 +247,15 @@ switch:
     restore_mode: ALWAYS_OFF
 
 remote_receiver:
-  pin: GPIO04
+  pin:
+    number: GPIO04
   dump: all
+  use_dma: True
 
 remote_transmitter:
-  pin: GPIO05
+  pin:
+    number: GPIO05
+    inverted: True
   carrier_duty_percent: 50%
+  use_dma: True
 
