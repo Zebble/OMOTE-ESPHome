@@ -70,7 +70,11 @@ i2c:
 tca8418_keypad:
   id: keypad
   address: 0x34
-  interrupt_pin: GPIO08
+  # Polling mode (interrupt_pin omitted): loop() reads the event FIFO every
+  # cycle. Interrupt mode (interrupt_pin: GPIO08) relies on enable_loop() being
+  # called from the ISR, which is unreliable on the ESPHome dev branch and
+  # resulted in zero key events. Polling has negligible cost for a keypad.
+  # interrupt_pin: GPIO08
   rows: 6
   columns: 5
   # Logs every key event so you can discover each physical button's keycode:
