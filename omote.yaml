@@ -2,6 +2,16 @@ esphome:
   name: omote-test
   friendly_name: omote-test
   on_boot:
+    # Power the peripheral rail (GPIO38, active-low) before the I2C bus scans, so
+    # the LIS3DH and the boot-time bus scan see a live bus. The display drives
+    # GPIO38 later during its own setup; enabling it early just avoids the
+    # harmless "SCL held low" scan error at boot.
+    - priority: 1010
+      then:
+        - lambda: |-
+            gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+            gpio_set_level(GPIO_NUM_38, 0);  // LOW = enabled (display uses inverted: true)
+            delay(250);
     # Required to set lcd_rd off before display will work
     - priority: 600
       then:
@@ -43,6 +53,8 @@ web_server:
   port: 80
 
 psram:
+  mode: octal
+  speed: 80MHz
 
 i2c:
   sda: GPIO20
@@ -61,6 +73,34 @@ tca8418_keypad:
   interrupt_pin: GPIO08
   rows: 6
   columns: 5
+  # Logs every key event so you can discover each physical button's keycode:
+  # press a button, read the keycode from the log, then add a binary_sensor for
+  # it below. Remove this once the full keymap is filled in.
+  on_key:
+    - then:
+        - lambda: |-
+            ESP_LOGI("keypad", "keycode=%u row=%u col=%u pressed=%s long=%s", keycode, row, col,
+                     pressed ? "true" : "false", long_press ? "true" : "false");
+
+# LIS3DH accelerometer on the shared I2C bus (address 0x19). Built on the shared
+# `motion` platform, so acceleration is exposed through `sensor: platform: motion`.
+motion:
+  - platform: lis3dh
+    id: imu
+    address: 0x19
+    accelerometer_range: 2G
+    accelerometer_odr: 50HZ          # enough for motion wake, low power
+    operating_mode: LOW_POWER
+    update_interval: 1s
+    # Motion interrupt on INT1 (wired to GPIO2, active-low). Arms the wake source
+    # for deep_sleep (see the commented block near the bottom). high_pass_filter
+    # removes gravity so the small 0.2g threshold reacts to actual movement.
+    interrupt:
+      pin: INT1
+      threshold: 0.2g
+      active_high: false
+      latched: false
+      high_pass_filter: true
 
 output:
   # LCD Backlight GPIO
@@ -102,6 +142,28 @@ touchscreen:
     transform:
       mirror_x: True
       mirror_y: True
+
+sensor:
+  # LIS3DH temperature (relative / uncalibrated - add filters to calibrate).
+  - platform: lis3dh
+    type: temperature
+    name: "LIS3DH Temperature"
+  # Acceleration axes (unit: g) via the shared motion platform.
+  - platform: motion
+    type: acceleration_x
+    name: "Accel X"
+  - platform: motion
+    type: acceleration_y
+    name: "Accel Y"
+  - platform: motion
+    type: acceleration_z
+    name: "Accel Z"
+  - platform: motion
+    type: pitch
+    name: "Pitch"
+  - platform: motion
+    type: roll
+    name: "Roll"
 
 binary_sensor:
   - platform: gpio
@@ -258,6 +320,16 @@ switch:
       number: GPIO06
     restore_mode: ALWAYS_OFF
 
+  # Uncomment together with the deep_sleep block below to keep the remote awake
+  # (prevents sleep) for development / OTA updates.
+  # - platform: template
+  #   name: "Stay Awake"
+  #   optimistic: true
+  #   turn_on_action:
+  #     - deep_sleep.prevent: deep_sleep_1
+  #   turn_off_action:
+  #     - deep_sleep.allow: deep_sleep_1
+
 remote_receiver:
   pin:
     number: GPIO04
@@ -270,4 +342,16 @@ remote_transmitter:
     inverted: True
   carrier_duty_percent: 50%
   use_dma: True
+
+# Deep-sleep motion wake (uncomment to enable, along with the "Stay Awake" switch
+# above). The LIS3DH INT1 pad (GPIO2, active-low) wakes the device on movement;
+# it stays awake run_duration after each wake. The accelerometer keeps sampling
+# on its always-on rail while the ESP sleeps.
+# deep_sleep:
+#   id: deep_sleep_1
+#   run_duration: 60s
+#   wakeup_pin:
+#     number: GPIO2
+#     inverted: true          # INT is active-low: wake when it pulls GPIO2 LOW
+#   wakeup_pin_mode: KEEP_AWAKE
 
