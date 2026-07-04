@@ -8,9 +8,11 @@ esphome:
         - output.turn_off: lcd_rd
 
 external_components:
-  # Modified version of evil-dog's tca8418 component, to extend usable key codes
-  #- source: github://evil-dog/esphome-tca8418@main
-  - source: github://Zebble/esphome-tca8418@main
+  # csaboka21's TCA8418 keypad component - drains the full event FIFO on each
+  # interrupt (fixes the intermittent/dropped key presses seen with the older
+  # evil-dog fork) and adds press/release, debounce and long-press handling.
+  - source: github://csaboka21/esphome-TCA8418@main
+    components: [tca8418_keypad]
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -50,10 +52,15 @@ i2c:
   scl_pullup_enabled: False
   scan: true
 
-# the interrupt_pin is required.
-tca8418:
-  - address: 0x34
-    interrupt_pin: GPIO08
+# TCA8418 keypad controller. rows/columns must cover the highest key in use:
+# the Power button is keycode 51 = row 5, so 6 rows are scanned; columns top out
+# at index 4 (keycode 5), so 5 columns. Bump these if you map keys with higher codes.
+tca8418_keypad:
+  id: keypad
+  address: 0x34
+  interrupt_pin: GPIO08
+  rows: 6
+  columns: 5
 
 output:
   # LCD Backlight GPIO
@@ -109,25 +116,30 @@ binary_sensor:
       - delayed_off: 1s
 
   # Physical Keypad
-  - platform: tca8418
+  - platform: tca8418_keypad
+    keypad_id: keypad
     id: s17
-    key: 51
+    keycode: 51
     name: "Power"
-  - platform: tca8418
+  - platform: tca8418_keypad
+    keypad_id: keypad
     id: s25
-    key: 5
+    keycode: 5
     name: "Stop"
-  - platform: tca8418
+  - platform: tca8418_keypad
+    keypad_id: keypad
     id: s24
-    key: 4
+    keycode: 4
     name: "Rewind"
-  - platform: tca8418
+  - platform: tca8418_keypad
+    keypad_id: keypad
     id: s22
-    key: 2
+    keycode: 2
     name: "Play"
-  - platform: tca8418
+  - platform: tca8418_keypad
+    keypad_id: keypad
     id: s16
-    key: 11
+    keycode: 11
     name: "Fast Forward"
 
 spi:
