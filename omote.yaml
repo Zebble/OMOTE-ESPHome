@@ -23,7 +23,6 @@ external_components:
   # individual GPI pin in event mode, which this component configures;
   # csaboka21's matrix-only component does not work on this board.
   - source: github://Zebble/esphome-tca8418@claude/poll-events
-    refresh: 0s   # always re-fetch the branch (avoids a stale cached copy)
 
 esp32:
   board: esp32-s3-devkitc-1
