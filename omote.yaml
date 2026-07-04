@@ -18,11 +18,11 @@ esphome:
         - output.turn_off: lcd_rd
 
 external_components:
-  # csaboka21's TCA8418 keypad component - drains the full event FIFO on each
-  # interrupt (fixes the intermittent/dropped key presses seen with the older
-  # evil-dog fork) and adds press/release, debounce and long-press handling.
-  - source: github://csaboka21/esphome-TCA8418@main
-    components: [tca8418_keypad]
+  # Zebble's tca8418 fork (evil-dog based), patched to poll the key-event FIFO
+  # every loop for reliable key detection. The OMOTE wires each button as an
+  # individual GPI pin in event mode, which this component configures;
+  # csaboka21's matrix-only component does not work on this board.
+  - source: github://Zebble/esphome-tca8418@claude/poll-events
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -67,24 +67,14 @@ i2c:
 # TCA8418 keypad controller. rows/columns must cover the highest key in use:
 # the Power button is keycode 51 = row 5, so 6 rows are scanned; columns top out
 # at index 4 (keycode 5), so 5 columns. Bump these if you map keys with higher codes.
-tca8418_keypad:
-  id: keypad
-  address: 0x34
-  # Polling mode (interrupt_pin omitted): loop() reads the event FIFO every
-  # cycle. Interrupt mode (interrupt_pin: GPIO08) relies on enable_loop() being
-  # called from the ISR, which is unreliable on the ESPHome dev branch and
-  # resulted in zero key events. Polling has negligible cost for a keypad.
-  # interrupt_pin: GPIO08
-  rows: 6
-  columns: 5
-  # Logs every key event so you can discover each physical button's keycode:
-  # press a button, read the keycode from the log, then add a binary_sensor for
-  # it below. Remove this once the full keymap is filled in.
-  on_key:
-    - then:
-        - lambda: |-
-            ESP_LOGI("keypad", "keycode=%u row=%u col=%u pressed=%s long=%s", keycode, row, col,
-                     pressed ? "true" : "false", long_press ? "true" : "false");
+# TCA8418 keypad controller. interrupt_pin is required by the component (it also
+# polls the FIFO every loop, so presses are caught even if an edge is missed).
+# The component logs every key event at DEBUG level ("Key event: N") - press each
+# physical button and read N from the log to discover its keycode, then add a
+# binary_sensor for it below.
+tca8418:
+  - address: 0x34
+    interrupt_pin: GPIO08
 
 # LIS3DH accelerometer on the shared I2C bus (address 0x19). Built on the shared
 # `motion` platform, so acceleration is exposed through `sensor: platform: motion`.
@@ -182,30 +172,25 @@ binary_sensor:
       - delayed_off: 1s
 
   # Physical Keypad
-  - platform: tca8418_keypad
-    keypad_id: keypad
+  - platform: tca8418
     id: s17
-    keycode: 51
+    key: 51
     name: "Power"
-  - platform: tca8418_keypad
-    keypad_id: keypad
+  - platform: tca8418
     id: s25
-    keycode: 5
+    key: 5
     name: "Stop"
-  - platform: tca8418_keypad
-    keypad_id: keypad
+  - platform: tca8418
     id: s24
-    keycode: 4
+    key: 4
     name: "Rewind"
-  - platform: tca8418_keypad
-    keypad_id: keypad
+  - platform: tca8418
     id: s22
-    keycode: 2
+    key: 2
     name: "Play"
-  - platform: tca8418_keypad
-    keypad_id: keypad
+  - platform: tca8418
     id: s16
-    keycode: 11
+    key: 11
     name: "Fast Forward"
 
 spi:
