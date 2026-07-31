@@ -19,7 +19,7 @@ Components:
 - [x] Battery Charging binary sensor
 - [x] Matrix Keypad using tca8418 external component
 - [x] Power button, USB 3v3 and SD Card detect through Matrix Keypad pins
-- [ ] LIS3DH accelerometer
+- [ ] LIS3DH accelerometer (driver currently in progress as [PR#17393](https://github.com/esphome/esphome/pull/17393)
 - [ ] SD Card
 - [ ] Battery Fuel Gauge (MAX17048G)
 
