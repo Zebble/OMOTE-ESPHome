@@ -28,6 +28,6 @@ Features:
 - [x] LVGL built-in demo display - touchscreen enabled
 - [x] Brightness control of LCD backlight, restored on boot
 - [x] Brightness control of Keypad backlights, restored on boot
-- [ ] Sleep / Wake-up using timer and LIS3DH
+- [ ] Sleep / Wake-up using timer and LIS3DH (proof of concept/testing completed - waiting on [PR#17393](https://github.com/esphome/esphome/pull/17393))
 - [ ] Battery gauge
 - [ ] Remote Control Framework!
