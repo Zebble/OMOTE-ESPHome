@@ -1,0 +1,75 @@
+esphome:
+  name: omote-keypad-test
+  on_boot:
+    # OMOTE rev5: GPIO38 (active-low) powers the peripheral rail that the I2C
+    # devices and their pull-ups sit on. Enable it before the bus initializes.
+    - priority: 1010
+      then:
+        - lambda: |-
+            gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+            gpio_set_level(GPIO_NUM_38, 0);
+            delay(250);
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  level: DEBUG
+
+api:
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+i2c:
+  sda: GPIO20
+  scl: GPIO19
+  # OMOTE provides hardware pull-ups
+  sda_pullup_enabled: false
+  scl_pullup_enabled: false
+  scan: true
+
+tca8418:
+  - id: keypad
+    address: 0x34
+    # No rows/columns: every pin reports as an individual input, which is how
+    # the OMOTE wires its buttons. interrupt_pin is deliberately omitted so the
+    # device is polled over I2C - the mode we know works on this board.
+    # interrupt_pin: GPIO08
+    on_key:
+      - logger.log:
+          format: "TCA8418 key number: %u"
+          args: [x]
+
+binary_sensor:
+  # The five keys already identified on this board. Press every other button and
+  # read its number from the log line above to fill in the rest.
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 51
+    name: "Power"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 5
+    name: "Stop"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 4
+    name: "Rewind"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 2
+    name: "Play"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 11
+    name: "Fast Forward"
