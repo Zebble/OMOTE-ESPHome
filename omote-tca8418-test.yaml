@@ -41,35 +41,44 @@ i2c:
 tca8418:
   - id: keypad
     address: 0x34
-    # No rows/columns: every pin reports as an individual input, which is how
-    # the OMOTE wires its buttons. interrupt_pin is deliberately omitted so the
-    # device is polled over I2C - the mode we know works on this board.
+    # The OMOTE scans a 5x5 key matrix on ROW0-4 / COL0-4. The pins left over
+    # (ROW5-7, COL5-9) stay as individual inputs, which is how the Power button
+    # is wired - it reports as key number 102 (ROW5).
+    # interrupt_pin is deliberately omitted so the device is polled over I2C.
     # interrupt_pin: GPIO08
+    rows: 5
+    columns: 5
     on_key:
       - logger.log:
           format: "TCA8418 key number: %u"
           args: [x]
 
 binary_sensor:
-  # The five keys already identified on this board. Press every other button and
-  # read its number from the log line above to fill in the rest.
+  # Power is an individual input on ROW5, so it is matched by key number.
   - platform: tca8418
     keypad_id: keypad
-    key_code: 51
+    key_code: 102
     name: "Power"
+  # Matrix keys are matched by their position. Press every other button and read
+  # its number from the log line above to fill in the rest: matrix numbers are
+  # row * 10 + col + 1, so 2 is row 0 / col 1.
   - platform: tca8418
     keypad_id: keypad
-    key_code: 5
+    row: 0
+    col: 4
     name: "Stop"
   - platform: tca8418
     keypad_id: keypad
-    key_code: 4
+    row: 0
+    col: 3
     name: "Rewind"
   - platform: tca8418
     keypad_id: keypad
-    key_code: 2
+    row: 0
+    col: 1
     name: "Play"
   - platform: tca8418
     keypad_id: keypad
-    key_code: 11
+    row: 1
+    col: 0
     name: "Fast Forward"
