@@ -44,8 +44,9 @@ tca8418:
     # The OMOTE scans a 5x5 key matrix on ROW0-4 / COL0-4. The pins left over
     # (ROW5-7, COL5-9) stay as individual inputs, which is how the Power button
     # is wired - it reports as key number 102 (ROW5).
-    # interrupt_pin is deliberately omitted so the device is polled over I2C.
-    # interrupt_pin: GPIO08
+    # The interrupt pin lets the component react as soon as a key is pressed
+    # rather than polling the bus; omit it to fall back to polling.
+    interrupt_pin: GPIO08
     rows: 5
     columns: 5
     on_key:
