@@ -1,0 +1,164 @@
+esphome:
+  name: omote-keypad-test
+  on_boot:
+    # OMOTE rev5: GPIO38 (active-low) powers the peripheral rail that the I2C
+    # devices and their pull-ups sit on. Enable it before the bus initializes.
+    - priority: 1010
+      then:
+        - lambda: |-
+            gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+            gpio_set_level(GPIO_NUM_38, 0);
+            delay(250);
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  level: DEBUG
+
+api:
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+i2c:
+  sda: GPIO20
+  scl: GPIO19
+  # OMOTE provides hardware pull-ups
+  sda_pullup_enabled: false
+  scl_pullup_enabled: false
+  scan: true
+
+tca8418:
+  - id: keypad
+    address: 0x34
+    # The OMOTE scans a 5x5 key matrix on ROW0-4 / COL0-4. The pins left over
+    # (ROW5-7, COL5-9) stay as individual inputs, which is how the Power button
+    # is wired - it reports as key number 102 (ROW5).
+    # The interrupt pin lets the component react as soon as a key is pressed
+    # rather than polling the bus; omit it to fall back to polling.
+    interrupt_pin: GPIO08
+    rows: 5
+    columns: 5
+    on_key:
+      - logger.log:
+          format: "TCA8418 key number: %u"
+          args: [x]
+
+binary_sensor:
+  # Matrix layout, by key number (row * 10 + col + 1). Key numbers 1 and 12 are
+  # unused positions.
+  #
+  #        COL0          COL1          COL2         COL3         COL4
+  # ROW0   -             Play (2)      Conf (3)     Rewind (4)   Stop (5)
+  # ROW1   FastFwd (11)  -             Back (13)    Up (14)      Left (15)
+  # ROW2   Blue (21)     Chan- (22)    Red (23)     Yellow (24)  Green (25)
+  # ROW3   Info (31)     Right (32)    Vol+ (33)    OK (34)      Down (35)
+  # ROW4   SRC (41)      Chan+ (42)    Vol- (43)    Mute (44)    Record (45)
+  #
+  # Power is not part of the matrix: it is an individual input on ROW5.
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 102
+    name: "Power"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 2
+    name: "Play"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 3
+    name: "Conf"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 4
+    name: "Rewind"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 5
+    name: "Stop"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 11
+    name: "Fast Forward"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 13
+    name: "Back"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 14
+    name: "Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 15
+    name: "Left"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 21
+    name: "Blue"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 22
+    name: "Channel Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 23
+    name: "Red"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 24
+    name: "Yellow"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 25
+    name: "Green"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 31
+    name: "Info"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 32
+    name: "Right"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 33
+    name: "Volume Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 34
+    name: "OK"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 35
+    name: "Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 41
+    name: "SRC"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 42
+    name: "Channel Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 43
+    name: "Volume Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 44
+    name: "Mute"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 45
+    name: "Record"

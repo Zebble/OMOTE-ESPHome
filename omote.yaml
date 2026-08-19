@@ -2,15 +2,20 @@ esphome:
   name: omote-test
   friendly_name: omote-test
   on_boot:
+    # Power the peripheral rail (GPIO38, active-low) before the I2C bus scans, so
+    # the LIS3DH and the boot-time bus scan see a live bus. The display drives
+    # GPIO38 later during its own setup; enabling it early just avoids the
+    # harmless "SCL held low" scan error at boot.
+    - priority: 1010
+      then:
+        - lambda: |-
+            gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+            gpio_set_level(GPIO_NUM_38, 0);  // LOW = enabled (display uses inverted: true)
+            delay(250);
     # Required to set lcd_rd off before display will work
     - priority: 600
       then:
         - output.turn_off: lcd_rd
-
-external_components:
-  # Modified version of evil-dog's tca8418 component, to extend usable key codes
-  #- source: github://evil-dog/esphome-tca8418@main
-  - source: github://Zebble/esphome-tca8418@main
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -41,6 +46,8 @@ web_server:
   port: 80
 
 psram:
+  mode: octal
+  speed: 80MHz
 
 i2c:
   sda: GPIO20
@@ -50,10 +57,35 @@ i2c:
   scl_pullup_enabled: False
   scan: true
 
-# the interrupt_pin is required.
+# TCA8418 keypad controller. The OMOTE scans a 5x5 key matrix (ROW0-4 / COL0-4);
+# the pins left over stay as individual inputs, which is how the Power button is
+# wired (it reports as key number 102, ROW5).
 tca8418:
-  - address: 0x34
+  - id: keypad
+    address: 0x34
     interrupt_pin: GPIO08
+    rows: 5
+    columns: 5
+
+# LIS3DH accelerometer on the shared I2C bus (address 0x19). Built on the shared
+# `motion` platform, so acceleration is exposed through `sensor: platform: motion`.
+motion:
+  - platform: lis3dh
+    id: imu
+    address: 0x19
+    accelerometer_range: 2G
+    accelerometer_odr: 50HZ          # enough for motion wake, low power
+    operating_mode: LOW_POWER
+    update_interval: 1s
+    # Motion interrupt on INT1 (wired to GPIO2, active-low). Arms the wake source
+    # for deep_sleep (see the commented block near the bottom). high_pass_filter
+    # removes gravity so the small 0.2g threshold reacts to actual movement.
+    interrupt:
+      pin: INT1
+      threshold: 0.2g
+      active_high: false
+      latched: false
+      high_pass_filter: true
 
 output:
   # LCD Backlight GPIO
@@ -96,6 +128,42 @@ touchscreen:
       mirror_x: True
       mirror_y: True
 
+sensor:
+  # Battery fuel gauge. The board has a MAX17048 at 0x36, which ESPHome's
+  # max17043 component reads correctly: same address and registers, and the
+  # voltage scaling works out identical (1.25mV / 16 = 78.125uV).
+  - platform: max17043
+    update_interval: 60s
+    battery_voltage:
+      name: "Battery Voltage"
+    battery_level:
+      name: "Battery Level"
+      # The gauge reads a little over 100% on a full battery.
+      filters:
+        - clamp:
+            max_value: 100
+
+  # LIS3DH temperature (relative / uncalibrated - add filters to calibrate).
+  - platform: lis3dh
+    type: temperature
+    name: "LIS3DH Temperature"
+  # Acceleration axes (unit: g) via the shared motion platform.
+  - platform: motion
+    type: acceleration_x
+    name: "Accel X"
+  - platform: motion
+    type: acceleration_y
+    name: "Accel Y"
+  - platform: motion
+    type: acceleration_z
+    name: "Accel Z"
+  - platform: motion
+    type: pitch
+    name: "Pitch"
+  - platform: motion
+    type: roll
+    name: "Roll"
+
 binary_sensor:
   - platform: gpio
     name: "Battery Charging"
@@ -108,27 +176,113 @@ binary_sensor:
     filters:
       - delayed_off: 1s
 
-  # Physical Keypad
+  # Physical Keypad. Matrix layout, by key number (row * 10 + col + 1);
+  # key numbers 1 and 12 are unused positions.
+  #
+  #        COL0          COL1          COL2         COL3         COL4
+  # ROW0   -             Play (2)      Conf (3)     Rewind (4)   Stop (5)
+  # ROW1   FastFwd (11)  -             Back (13)    Up (14)      Left (15)
+  # ROW2   Blue (21)     Chan- (22)    Red (23)     Yellow (24)  Green (25)
+  # ROW3   Info (31)     Right (32)    Vol+ (33)    OK (34)      Down (35)
+  # ROW4   SRC (41)      Chan+ (42)    Vol- (43)    Mute (44)    Record (45)
+  #
+  # Power is not part of the matrix: it is an individual input on ROW5.
   - platform: tca8418
-    id: s17
-    key: 51
+    keypad_id: keypad
+    key_code: 102
     name: "Power"
   - platform: tca8418
-    id: s25
-    key: 5
-    name: "Stop"
-  - platform: tca8418
-    id: s24
-    key: 4
-    name: "Rewind"
-  - platform: tca8418
-    id: s22
-    key: 2
+    keypad_id: keypad
+    key_code: 2
     name: "Play"
   - platform: tca8418
-    id: s16
-    key: 11
+    keypad_id: keypad
+    key_code: 3
+    name: "Conf"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 4
+    name: "Rewind"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 5
+    name: "Stop"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 11
     name: "Fast Forward"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 13
+    name: "Back"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 14
+    name: "Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 15
+    name: "Left"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 21
+    name: "Blue"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 22
+    name: "Channel Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 23
+    name: "Red"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 24
+    name: "Yellow"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 25
+    name: "Green"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 31
+    name: "Info"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 32
+    name: "Right"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 33
+    name: "Volume Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 34
+    name: "OK"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 35
+    name: "Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 41
+    name: "SRC"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 42
+    name: "Channel Up"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 43
+    name: "Volume Down"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 44
+    name: "Mute"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 45
+    name: "Record"
 
 spi:
   - id: quad_spi_bus
@@ -246,6 +400,16 @@ switch:
       number: GPIO06
     restore_mode: ALWAYS_OFF
 
+  # Uncomment together with the deep_sleep block below to keep the remote awake
+  # (prevents sleep) for development / OTA updates.
+  # - platform: template
+  #   name: "Stay Awake"
+  #   optimistic: true
+  #   turn_on_action:
+  #     - deep_sleep.prevent: deep_sleep_1
+  #   turn_off_action:
+  #     - deep_sleep.allow: deep_sleep_1
+
 remote_receiver:
   pin:
     number: GPIO04
@@ -258,4 +422,16 @@ remote_transmitter:
     inverted: True
   carrier_duty_percent: 50%
   use_dma: True
+
+# Deep-sleep motion wake (uncomment to enable, along with the "Stay Awake" switch
+# above). The LIS3DH INT1 pad (GPIO2, active-low) wakes the device on movement;
+# it stays awake run_duration after each wake. The accelerometer keeps sampling
+# on its always-on rail while the ESP sleeps.
+# deep_sleep:
+#   id: deep_sleep_1
+#   run_duration: 60s
+#   wakeup_pin:
+#     number: GPIO2
+#     inverted: true          # INT is active-low: wake when it pulls GPIO2 LOW
+#   wakeup_pin_mode: KEEP_AWAKE
 
