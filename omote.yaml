@@ -129,6 +129,17 @@ touchscreen:
       mirror_y: True
 
 sensor:
+  # Battery fuel gauge. The board has a MAX17048 at 0x36; ESPHome's max17043
+  # component uses the same address and registers, and the voltage scaling works
+  # out identical (1.25mV/16 = 78.125uV), so it should read this part correctly.
+  # Raise update_interval once it is confirmed working - 10s is for testing.
+  - platform: max17043
+    update_interval: 10s
+    battery_voltage:
+      name: "Battery Voltage"
+    battery_level:
+      name: "Battery Level"
+
   # LIS3DH temperature (relative / uncalibrated - add filters to calibrate).
   - platform: lis3dh
     type: temperature

@@ -17,17 +17,17 @@ Components:
 - [x] IR Receiver with Power control
 - [x] IR Transmitter
 - [x] Battery Charging binary sensor
-- [x] Matrix Keypad using tca8418 external component
+- [x] Matrix Keypad using the built-in tca8418 component
 - [x] Power button, USB 3v3 and SD Card detect through Matrix Keypad pins
-- [ ] LIS3DH accelerometer
+- [x] LIS3DH accelerometer
 - [ ] SD Card
-- [ ] Battery Fuel Gauge (MAX17048G)
+- [ ] Battery Fuel Gauge (MAX17048G) - being tested with the max17043 component
 
 Features:
 - [x] Example Matrix Keypad binary sensors
 - [x] LVGL built-in demo display - touchscreen enabled
 - [x] Brightness control of LCD backlight, restored on boot
 - [x] Brightness control of Keypad backlights, restored on boot
-- [ ] Sleep / Wake-up using timer and LIS3DH
+- [x] Sleep / Wake-up using the LIS3DH (hardware tested; commented out in omote.yaml)
 - [ ] Battery gauge
 - [ ] Remote Control Framework!
