@@ -21,7 +21,7 @@ Components:
 - [x] Power button, USB 3v3 and SD Card detect through Matrix Keypad pins
 - [x] LIS3DH accelerometer
 - [ ] SD Card
-- [ ] Battery Fuel Gauge (MAX17048G) - being tested with the max17043 component
+- [x] Battery Fuel Gauge (MAX17048G) using the max17043 component
 
 Features:
 - [x] Example Matrix Keypad binary sensors
@@ -29,5 +29,5 @@ Features:
 - [x] Brightness control of LCD backlight, restored on boot
 - [x] Brightness control of Keypad backlights, restored on boot
 - [x] Sleep / Wake-up using the LIS3DH (hardware tested; commented out in omote.yaml)
-- [ ] Battery gauge
+- [x] Battery gauge
 - [ ] Remote Control Framework!
