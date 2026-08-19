@@ -54,15 +54,14 @@ tca8418:
           args: [x]
 
 binary_sensor:
-  # Matrix layout, by key number (row * 10 + col + 1). Key numbers 1, 12 and 35
-  # are unused positions - one of them is likely the "down" button, which has
-  # not been identified yet.
+  # Matrix layout, by key number (row * 10 + col + 1). Key numbers 1 and 12 are
+  # unused positions.
   #
   #        COL0          COL1          COL2         COL3         COL4
   # ROW0   -             Play (2)      Conf (3)     Rewind (4)   Stop (5)
   # ROW1   FastFwd (11)  -             Back (13)    Up (14)      Left (15)
   # ROW2   Blue (21)     Chan- (22)    Red (23)     Yellow (24)  Green (25)
-  # ROW3   Info (31)     Right (32)    Vol+ (33)    OK (34)      -
+  # ROW3   Info (31)     Right (32)    Vol+ (33)    OK (34)      Down (35)
   # ROW4   SRC (41)      Chan+ (42)    Vol- (43)    Mute (44)    Record (45)
   #
   # Power is not part of the matrix: it is an individual input on ROW5.
@@ -138,6 +137,10 @@ binary_sensor:
     keypad_id: keypad
     key_code: 34
     name: "OK"
+  - platform: tca8418
+    keypad_id: keypad
+    key_code: 35
+    name: "Down"
   - platform: tca8418
     keypad_id: keypad
     key_code: 41
