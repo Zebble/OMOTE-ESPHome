@@ -17,7 +17,7 @@ Components:
 - [x] IR Receiver with Power control
 - [x] IR Transmitter
 - [x] Battery Charging binary sensor
-- [ ] Matrix Keypad using a new built-in tca8418 component (hardware tested; upstream PR pending). Previously worked via an external component.
+- [ ] Matrix Keypad using a new built-in tca8418 component (driver currently in progress as [PR#18521](https://github.com/esphome/esphome/pull/18521)). Previously worked via an external component.
 - [x] Power button, USB 3v3 and SD Card detect through Matrix Keypad pins
 - [ ] LIS3DH accelerometer (driver currently in progress as [PR#17393](https://github.com/esphome/esphome/pull/17393)).
 - [ ] SD Card
