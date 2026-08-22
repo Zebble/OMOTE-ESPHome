@@ -4,6 +4,52 @@
 # (see keymap.yaml). This file is yours to edit - add an activity by adding an
 # option below, a page for it, and a branch in the page router.
 
+# The activity is restored on boot, which happens before the screen is ready, so
+# applying it is deferred until the display exists. Without that, the restored
+# value redraws the screen too early and the top layer is left blank.
+globals:
+  - id: ui_ready
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+esphome:
+  on_boot:
+    # Late, so LVGL has been set up.
+    - priority: -100
+      then:
+        - lambda: "id(ui_ready) = true;"
+        - script.execute: apply_activity
+
+script:
+  # Bring the screen in line with the current activity.
+  - id: apply_activity
+    then:
+      - if:
+          condition:
+            lambda: "return id(ui_ready);"
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(activity).current_option() == "Watch TV";'
+                then:
+                  - lvgl.page.show: page_tv
+            - if:
+                condition:
+                  lambda: 'return id(activity).current_option() == "Listen to Music";'
+                then:
+                  - lvgl.page.show: page_music
+            - if:
+                condition:
+                  lambda: |-
+                    auto current = id(activity).current_option();
+                    return current != "Watch TV" && current != "Listen to Music";
+                then:
+                  - lvgl.page.show: page_home
+            - lvgl.label.update:
+                id: status_activity
+                text: !lambda "return id(activity).current_option().str();"
+
 select:
   - platform: template
     id: activity
@@ -19,25 +65,7 @@ select:
       - logger.log:
           format: "Activity: %s"
           args: ["x.c_str()"]
-      - lvgl.label.update:
-          id: status_activity
-          text: !lambda "return x;"
-      # Show the page for the activity. Add a branch here for each new activity.
-      - if:
-          condition:
-            lambda: 'return x == "Watch TV";'
-          then:
-            - lvgl.page.show: page_tv
-      - if:
-          condition:
-            lambda: 'return x == "Listen to Music";'
-          then:
-            - lvgl.page.show: page_music
-      - if:
-          condition:
-            lambda: 'return x != "Watch TV" && x != "Listen to Music";'
-          then:
-            - lvgl.page.show: page_home
+      - script.execute: apply_activity
       # Let Home Assistant react to the change too.
       - homeassistant.event:
           event: esphome.omote_activity_changed
