@@ -66,3 +66,21 @@ or work offline - put it in `user/keymap.yaml` instead.
 1. Add the name to the `options` of the `activity` select in `user/activities.yaml`.
 2. Add a page for it in the same file.
 3. Add a branch to the page router in the select's `on_value`.
+
+## The screen
+
+`core/ui.yaml` owns the display, the touchscreen, and a bar drawn on top of every
+page showing the current activity, the battery (with a `+` while charging), and
+the last button pressed. The last-button readout is there to make testing easy:
+press a button and read it off the screen, rather than connecting to the log.
+
+Pages are yours, in `user/activities.yaml`.
+
+## To do
+
+**Route buttons per device.** Some buttons belong to a different device than the
+one the activity is nominally about: volume and mute usually belong to the
+amplifier no matter whether the TV or a streaming box is playing. Activities
+should be able to say which device each button goes to, so volume reaches the
+amplifier while the transport buttons reach whatever is playing, without
+repeating the mapping in every activity.

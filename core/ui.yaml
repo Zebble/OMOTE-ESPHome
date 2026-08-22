@@ -1,0 +1,33 @@
+# Screen shell.
+#
+# Owns the display, the touchscreen and the bar that stays on top of every page.
+# The pages themselves are yours, in user/activities.yaml.
+
+lvgl:
+  id: omote_lvgl
+  displays:
+    - omote_display
+  touchscreens:
+    - omote_touch
+  # Drawn above every page, so the status stays visible whatever is on screen.
+  top_layer:
+    widgets:
+      - label:
+          id: status_activity
+          align: TOP_LEFT
+          x: 4
+          y: 2
+          text: "Starting"
+      - label:
+          id: status_battery
+          align: TOP_RIGHT
+          x: -4
+          y: 2
+          text: ""
+      # The last button pressed. Handy when testing: press a button and read it
+      # here, instead of watching the log.
+      - label:
+          id: status_key
+          align: BOTTOM_MID
+          y: -2
+          text: ""

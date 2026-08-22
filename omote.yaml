@@ -17,6 +17,7 @@ packages:
   # Framework. Replace these when updating; do not edit.
   hardware: !include core/hardware.yaml
   ir: !include core/ir.yaml
+  ui: !include core/ui.yaml
   # Yours.
   activities: !include user/activities.yaml
   keymap: !include user/keymap.yaml

@@ -45,6 +45,19 @@ tca8418:
     interrupt_pin: GPIO08
     rows: 5
     columns: 5
+    on_key:
+      # Show the key on screen. Matrix keys are numbered row * 10 + col + 1;
+      # anything from 97 up is a pin outside the matrix.
+      - lvgl.label.update:
+          id: status_key
+          text: !lambda |-
+            char buf[24];
+            if (x >= 97) {
+              snprintf(buf, sizeof(buf), "Key %u (input)", x);
+            } else {
+              snprintf(buf, sizeof(buf), "Key %u  r%u c%u", x, (x - 1) / 10, (x - 1) % 10);
+            }
+            return std::string(buf);
 
 # Accelerometer, used for motion wake-up.
 motion:
@@ -153,6 +166,13 @@ sensor:
       filters:
         - clamp:
             max_value: 100
+      on_value:
+        - lvgl.label.update:
+            id: status_battery
+            text: !lambda |-
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%.0f%%%s", x, id(battery_charging).state ? " +" : "");
+              return std::string(buf);
 
 binary_sensor:
   - platform: gpio
@@ -166,3 +186,10 @@ binary_sensor:
         pullup: true
     filters:
       - delayed_off: 1s
+    on_state:
+      - lvgl.label.update:
+          id: status_battery
+          text: !lambda |-
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%.0f%%%s", id(battery_level).state, x ? " +" : "");
+            return std::string(buf);

@@ -19,6 +19,9 @@ select:
       - logger.log:
           format: "Activity: %s"
           args: ["x.c_str()"]
+      - lvgl.label.update:
+          id: status_activity
+          text: !lambda "return x;"
       # Show the page for the activity. Add a branch here for each new activity.
       - if:
           condition:
@@ -42,11 +45,6 @@ select:
             activity: !lambda "return x;"
 
 lvgl:
-  id: omote_lvgl
-  displays:
-    - omote_display
-  touchscreens:
-    - omote_touch
   pages:
     # Home: pick an activity.
     - id: page_home
