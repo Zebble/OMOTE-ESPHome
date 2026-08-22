@@ -84,3 +84,9 @@ amplifier no matter whether the TV or a streaming box is playing. Activities
 should be able to say which device each button goes to, so volume reaches the
 amplifier while the transport buttons reach whatever is playing, without
 repeating the mapping in every activity.
+
+**Repeat while a button is held.** Volume, channel and the arrow keys should be
+able to repeat while held, rather than sending one command per press, and stop on
+release. It should be per button, since a button like power must never repeat.
+Physical buttons report press and release separately, so the repeat can be driven
+from those; on-screen buttons have their own repeat setting.
