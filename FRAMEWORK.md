@@ -27,18 +27,13 @@ activity can be started from a dashboard, a voice command or an automation, and
 the remote follows. Changing activity also fires an `esphome.omote_activity_changed`
 event.
 
-**The remote is an IR blaster Home Assistant can drive.** Rather than compiling
-codes into the firmware, Home Assistant passes the code to send:
+**The remote is an infrared adapter.** It publishes `infrared` entities, which the
+Home Assistant [Infrared integration](https://www.home-assistant.io/integrations/infrared)
+(2026.4 and later) drives. Home Assistant learns the codes, keeps them, and sends
+them through the remote, so devices can be added without rebuilding the firmware.
 
-```yaml
-action: esphome.omote_send_pronto
-data:
-  code: "0000 006D 0022 0002 015B 00AD ..."
-```
-
-There are `send_nec` and `send_sony` actions too. Because the code is data,
-devices can be added without rebuilding the firmware - keep the codes in Home
-Assistant and the remote stays generic.
+There are also `send_pronto` and `send_nec` actions, for sending a code you
+already know from a script or automation.
 
 ## Direct control
 
@@ -51,20 +46,20 @@ how to talk to them.
 
 ## Learning IR codes
 
-Home Assistant has no general purpose IR learning; what exists is tied to
-particular hardware (the Broadlink integration), or is a database of codes
-(SmartIR). The OMOTE has its own IR receiver, so it can learn codes itself:
+Home Assistant does the learning, through the Infrared integration and the
+remote's **IR Receiver** entity:
 
-1. Turn on the **IR Learning** switch. This powers the receiver.
-2. Point the original remote at the OMOTE and press a button.
-3. The code appears in the **Last IR Code** sensor, in Pronto format, and in the
-   log in every protocol the receiver could decode.
-4. Store it in Home Assistant and send it back with `send_pronto`, or paste it
-   into `user/keymap.yaml` for a directly mapped button.
-5. Turn the switch off when finished, so the receiver is not left powered.
+1. Turn on the **IR Receiver Power** switch. The receiver is unpowered by default
+   so it does not drain the battery.
+2. Start learning in Home Assistant against the OMOTE's IR Receiver entity.
+3. Point the original remote at the OMOTE and press the button to learn.
+4. Home Assistant stores the code and can send it back through the IR
+   Transmitter entity.
+5. Turn the receiver power off when finished.
 
-Pronto is worth preferring: it is what IR databases and learning tools produce,
-so codes can be moved between them and the remote.
+The codes stay in Home Assistant, so nothing has to be rebuilt to add a device.
+If you would rather keep a code on the device - for a button that has to be fast
+or work offline - put it in `user/keymap.yaml` instead.
 
 ## Adding an activity
 
