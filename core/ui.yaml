@@ -31,3 +31,12 @@ lvgl:
           align: BOTTOM_MID
           y: -2
           text: ""
+
+# On a cold boot the top layer can come up blank while the pages draw fine. A
+# periodic redraw brings it back, and doubles as a probe: if the bar appears a
+# few seconds after boot, the layer is being drawn over rather than never
+# created.
+interval:
+  - interval: 5s
+    then:
+      - lvgl.widget.redraw:

@@ -49,6 +49,8 @@ script:
             - lvgl.label.update:
                 id: status_activity
                 text: !lambda "return id(activity).current_option().str();"
+            # Showing a page can leave the top layer blank, so redraw it.
+            - lvgl.widget.redraw:
 
 select:
   - platform: template
