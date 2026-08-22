@@ -1,0 +1,168 @@
+# OMOTE rev5 hardware definition.
+#
+# This file describes the board and nothing about what the remote does. Update it
+# when the framework is updated; put your own configuration in the files under
+# user/ instead.
+
+esphome:
+  on_boot:
+    # GPIO38 (active low) powers the peripheral rail that the I2C devices and
+    # their pull-ups sit on. It has to be on before the I2C bus initialises.
+    - priority: 1010
+      then:
+        - lambda: |-
+            gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+            gpio_set_level(GPIO_NUM_38, 0);
+            delay(250);
+    # The display will not work until lcd_rd is high.
+    - priority: 600
+      then:
+        - output.turn_off: lcd_rd
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+i2c:
+  sda: GPIO20
+  scl: GPIO19
+  # The board provides its own pull-ups.
+  sda_pullup_enabled: false
+  scl_pullup_enabled: false
+  scan: true
+
+# Keypad scanner: a 5x5 matrix on ROW0-4 / COL0-4, with the power button wired
+# to ROW5 and so reported as an individual input (key number 102).
+tca8418:
+  - id: keypad
+    address: 0x34
+    interrupt_pin: GPIO08
+    rows: 5
+    columns: 5
+
+# Accelerometer, used for motion wake-up.
+motion:
+  - platform: lis3dh
+    id: imu
+    address: 0x19
+    accelerometer_range: 2G
+    accelerometer_odr: 50HZ
+    operating_mode: LOW_POWER
+    update_interval: 1s
+    interrupt:
+      pin: INT1
+      threshold: 0.2g
+      active_high: false
+      latched: false
+      high_pass_filter: true
+
+spi:
+  - id: quad_spi_bus
+    type: octal
+    clk_pin:
+      number: GPIO41
+    data_pins: [GPIO48, GPIO47, GPIO21, GPIO14, GPIO13, GPIO12, GPIO11, GPIO10]
+
+display:
+  - platform: mipi_spi
+    id: omote_display
+    model: ILI9341
+    bus_mode: octal
+    dc_pin: GPIO40
+    cs_pin: GPIO39
+    enable_pin:
+      number: GPIO38
+      inverted: true
+    auto_clear_enabled: false
+    update_interval: never
+    data_rate: 40MHz
+
+touchscreen:
+  - platform: ft63x6
+    id: omote_touch
+    transform:
+      mirror_x: true
+      mirror_y: true
+
+output:
+  - platform: ledc
+    id: lcd_backlight_output
+    pin:
+      number: GPIO09
+      inverted: true
+  - platform: ledc
+    id: keypad_backlight_output
+    pin:
+      number: GPIO46
+  - platform: gpio
+    # Must be driven high before the display works; see on_boot above.
+    id: lcd_rd
+    pin:
+      number: GPIO42
+      inverted: true
+
+light:
+  - platform: monochromatic
+    id: lcd_backlight
+    output: lcd_backlight_output
+    restore_mode: RESTORE_DEFAULT_ON
+    name: "LCD Backlight"
+  - platform: monochromatic
+    id: keypad_backlight
+    output: keypad_backlight_output
+    restore_mode: RESTORE_DEFAULT_OFF
+    name: "Keypad Backlight"
+
+# Infrared. The receiver is only powered when learning; see core/ir.yaml.
+remote_transmitter:
+  id: ir_transmitter
+  pin:
+    number: GPIO05
+    inverted: true
+  carrier_duty_percent: 50%
+  use_dma: true
+
+remote_receiver:
+  id: ir_receiver
+  pin: GPIO04
+  dump: all
+  use_dma: true
+
+switch:
+  - platform: gpio
+    id: ir_receiver_power
+    name: "IR Receiver Power"
+    pin: GPIO06
+    restore_mode: ALWAYS_OFF
+
+sensor:
+  # Battery fuel gauge (a MAX17048, which the max17043 component reads correctly).
+  - platform: max17043
+    update_interval: 60s
+    battery_voltage:
+      name: "Battery Voltage"
+    battery_level:
+      name: "Battery Level"
+      id: battery_level
+      filters:
+        - clamp:
+            max_value: 100
+
+binary_sensor:
+  - platform: gpio
+    name: "Battery Charging"
+    id: battery_charging
+    pin:
+      number: GPIO01
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_off: 1s

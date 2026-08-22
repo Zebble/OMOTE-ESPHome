@@ -1,0 +1,125 @@
+# Activities: what the remote is being used for right now.
+#
+# The activity decides which screen is shown and what the physical buttons do
+# (see keymap.yaml). This file is yours to edit - add an activity by adding an
+# option below, a page for it, and a branch in the page router.
+
+select:
+  - platform: template
+    id: activity
+    name: "Activity"
+    icon: mdi:remote-tv
+    optimistic: true
+    restore_value: true
+    options:
+      - "Off"
+      - "Watch TV"
+      - "Listen to Music"
+    on_value:
+      - logger.log:
+          format: "Activity: %s"
+          args: ["x.c_str()"]
+      # Show the page for the activity. Add a branch here for each new activity.
+      - lambda: |-
+          if (x == "Watch TV") {
+            id(omote_lvgl)->show_page("page_tv", LV_SCR_LOAD_ANIM_NONE, 0);
+          } else if (x == "Listen to Music") {
+            id(omote_lvgl)->show_page("page_music", LV_SCR_LOAD_ANIM_NONE, 0);
+          } else {
+            id(omote_lvgl)->show_page("page_home", LV_SCR_LOAD_ANIM_NONE, 0);
+          }
+      # Let Home Assistant react to the change too.
+      - homeassistant.event:
+          event: esphome.omote_activity_changed
+          data:
+            activity: !lambda "return x;"
+
+lvgl:
+  id: omote_lvgl
+  displays:
+    - omote_display
+  touchscreens:
+    - omote_touch
+  pages:
+    # Home: pick an activity.
+    - id: page_home
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 8
+            text: "OMOTE"
+        - buttonmatrix:
+            align: CENTER
+            width: 220
+            height: 200
+            rows:
+              - buttons:
+                  - text: "Watch TV"
+                    key_code: 1
+              - buttons:
+                  - text: "Listen to Music"
+                    key_code: 2
+              - buttons:
+                  - text: "Off"
+                    key_code: 3
+            on_press:
+              then:
+                - lambda: |-
+                    if (x == 0) id(activity).make_call().set_option("Watch TV").perform();
+                    else if (x == 1) id(activity).make_call().set_option("Listen to Music").perform();
+                    else id(activity).make_call().set_option("Off").perform();
+
+    # One page per activity. The buttons call Home Assistant, so what they do can
+    # be changed without rebuilding the firmware.
+    - id: page_tv
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 8
+            text: "Watch TV"
+        - buttonmatrix:
+            align: CENTER
+            width: 220
+            height: 200
+            rows:
+              - buttons:
+                  - text: "Vol +"
+                  - text: "Ch +"
+              - buttons:
+                  - text: "Vol -"
+                  - text: "Ch -"
+              - buttons:
+                  - text: "Home"
+            on_press:
+              then:
+                - lambda: |-
+                    static const char *const CMDS[] = {"volume_up", "channel_up", "volume_down", "channel_down"};
+                    if (x < 4) {
+                      ESP_LOGD("omote", "TV command: %s", CMDS[x]);
+                    } else {
+                      id(activity).make_call().set_option("Off").perform();
+                    }
+
+    - id: page_music
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 8
+            text: "Listen to Music"
+        - buttonmatrix:
+            align: CENTER
+            width: 220
+            height: 200
+            rows:
+              - buttons:
+                  - text: "Play"
+                  - text: "Pause"
+              - buttons:
+                  - text: "Prev"
+                  - text: "Next"
+              - buttons:
+                  - text: "Home"
+            on_press:
+              then:
+                - lambda: |-
+                    if (x == 4) id(activity).make_call().set_option("Off").perform();

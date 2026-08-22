@@ -1,0 +1,82 @@
+# Infrared engine.
+#
+# The remote is a data driven IR blaster: Home Assistant passes the code to send,
+# so devices can be added without rebuilding the firmware. Pronto is the format
+# most IR databases and learning tools produce, so it is the one to prefer.
+#
+# From Home Assistant:
+#   action: esphome.<device>_send_pronto
+#   data:
+#     code: "0000 006D 0022 0002 015B 00AD ..."
+#
+# For codes you send constantly, and want to keep working when the network is
+# down, map them directly to a button in user/keymap.yaml instead.
+
+api:
+  actions:
+    # Send any IR code in Pronto hex format.
+    - action: send_pronto
+      variables:
+        code: string
+      then:
+        - remote_transmitter.transmit_pronto:
+            data: !lambda "return code;"
+
+    # Send a NEC code, the most common protocol on cheap remotes.
+    - action: send_nec
+      variables:
+        address: int
+        command: int
+      then:
+        - remote_transmitter.transmit_nec:
+            address: !lambda "return address;"
+            command: !lambda "return command;"
+
+    # Send a Sony code. Sony receivers expect the command repeated.
+    - action: send_sony
+      variables:
+        data: int
+        nbits: int
+      then:
+        - remote_transmitter.transmit_sony:
+            data: !lambda "return data;"
+            nbits: !lambda "return nbits;"
+
+# Learning. Turning this on powers the IR receiver; point a remote at the OMOTE
+# and press a button, and the code appears in "Last IR Code" (and in the log, in
+# every protocol the receiver could decode). Copy it into user/devices.yaml, or
+# store it in Home Assistant and send it back with the send_pronto action above.
+switch:
+  - platform: template
+    id: ir_learning
+    name: "IR Learning"
+    icon: mdi:remote
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - switch.turn_on: ir_receiver_power
+      - logger.log: "IR learning on - point a remote at the OMOTE and press a button"
+    turn_off_action:
+      - switch.turn_off: ir_receiver_power
+
+text_sensor:
+  - platform: template
+    id: last_ir_code
+    name: "Last IR Code"
+    icon: mdi:remote
+    update_interval: never
+
+remote_receiver:
+  id: ir_receiver
+  on_pronto:
+    then:
+      - if:
+          condition:
+            switch.is_on: ir_learning
+          then:
+            - text_sensor.template.publish:
+                id: last_ir_code
+                state: !lambda "return x.data;"
+            - logger.log:
+                format: "Learned IR code (Pronto): %s"
+                args: ["x.data.c_str()"]
