@@ -32,10 +32,22 @@ lvgl:
           y: -2
           text: ""
 
-# On a cold boot the top layer can come up blank while the pages draw fine. A
-# periodic redraw brings it back, and doubles as a probe: if the bar appears a
-# few seconds after boot, the layer is being drawn over rather than never
-# created.
+# Diagnostic: report what the screen is doing during start-up, so a cold boot can
+# be compared with the boot straight after flashing.
+esphome:
+  on_boot:
+    - priority: -100
+      then:
+        - logger.log: "UI: boot handler reached (LVGL should be up)"
+    - priority: -200
+      then:
+        - delay: 3s
+        - logger.log: "UI: redrawing after start-up"
+        - lvgl.widget.redraw:
+        - lvgl.label.update:
+            id: status_key
+            text: "ready"
+
 interval:
   - interval: 5s
     then:
