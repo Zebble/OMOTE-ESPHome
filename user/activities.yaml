@@ -20,14 +20,21 @@ select:
           format: "Activity: %s"
           args: ["x.c_str()"]
       # Show the page for the activity. Add a branch here for each new activity.
-      - lambda: |-
-          if (x == "Watch TV") {
-            id(omote_lvgl)->show_page("page_tv", LV_SCR_LOAD_ANIM_NONE, 0);
-          } else if (x == "Listen to Music") {
-            id(omote_lvgl)->show_page("page_music", LV_SCR_LOAD_ANIM_NONE, 0);
-          } else {
-            id(omote_lvgl)->show_page("page_home", LV_SCR_LOAD_ANIM_NONE, 0);
-          }
+      - if:
+          condition:
+            lambda: 'return x == "Watch TV";'
+          then:
+            - lvgl.page.show: page_tv
+      - if:
+          condition:
+            lambda: 'return x == "Listen to Music";'
+          then:
+            - lvgl.page.show: page_music
+      - if:
+          condition:
+            lambda: 'return x != "Watch TV" && x != "Listen to Music";'
+          then:
+            - lvgl.page.show: page_home
       # Let Home Assistant react to the change too.
       - homeassistant.event:
           event: esphome.omote_activity_changed

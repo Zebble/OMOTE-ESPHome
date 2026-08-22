@@ -26,8 +26,8 @@ binary_sensor:
     on_press:
       # Power cycles between the last activity and Off.
       - lambda: |-
-          auto current = id(activity).state;
-          id(activity).make_call().set_option(current == "Off" ? "Watch TV" : "Off").perform();
+          bool is_off = id(activity).current_option() == "Off";
+          id(activity).make_call().set_option(is_off ? "Watch TV" : "Off").perform();
 
   - platform: tca8418
     keypad_id: keypad
