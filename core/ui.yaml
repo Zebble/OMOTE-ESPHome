@@ -32,23 +32,20 @@ lvgl:
           y: -2
           text: ""
 
-# Diagnostic: report what the screen is doing during start-up, so a cold boot can
-# be compared with the boot straight after flashing.
+# Paint the status row once shortly after boot. The widgets are created during
+# start-up, and this makes sure they are drawn once the display is definitely up.
 esphome:
   on_boot:
-    - priority: -100
-      then:
-        - logger.log: "UI: boot handler reached (LVGL should be up)"
     - priority: -200
       then:
-        - delay: 3s
-        - logger.log: "UI: redrawing after start-up"
-        - lvgl.widget.redraw:
+        - delay: 1s
         - lvgl.label.update:
-            id: status_key
-            text: "ready"
-
-interval:
-  - interval: 5s
-    then:
-      - lvgl.widget.redraw:
+            id: status_battery
+            text: !lambda |-
+              if (!id(battery_level).has_state())
+                return std::string("");
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%.0f%%%s", id(battery_level).state,
+                       id(battery_charging).state ? " +" : "");
+              return std::string(buf);
+        - lvgl.widget.redraw:
