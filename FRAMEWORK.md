@@ -70,16 +70,27 @@ or work offline - put it in `user/keymap.yaml` instead.
 ## What a button does
 
 A button says what it does rather than which device it is for: the volume key
-sends `volume_up`, not "turn up the amplifier". The `send_command` script in
-`user/activities.yaml` works out where it should go, so the same button can reach
-different devices as the activity changes, and some buttons can ignore the
-activity entirely - volume and mute belong to the amplifier whether the
-television or the streamer is playing.
+sends `volume_up`, not "turn up the amplifier".
 
-The command then goes to Home Assistant as an `esphome.omote_command` event
-carrying the command, the device and the activity, and one automation there
-decides how to deliver it: as infrared through this remote, or over the network.
-Adding a device is a change in Home Assistant rather than a rebuild here.
+Each command belongs to a **role** - volume, channel, transport or navigation -
+and each **activity** decides which device fills each role. That is what lets the
+same volume key reach an amplifier while watching television and the speaker
+itself while streaming music, without the button knowing about either:
+
+```
+Watch TV          volume -> amplifier,  everything else -> television
+Listen to Music   everything -> sonos   (the speaker handles its own volume)
+```
+
+Roles are fixed; which device serves a role is the part you edit, in
+`send_command` in `user/activities.yaml`. Adding an activity means adding a
+branch there saying where its roles go.
+
+The command then reaches Home Assistant as an `esphome.omote_command` event
+carrying the command, the role, the device and the activity, and one automation
+there decides how to deliver it: as infrared through this remote, or over the
+network. Adding a device is a change in Home Assistant rather than a rebuild
+here.
 
 ```yaml
 triggers:
@@ -87,6 +98,11 @@ triggers:
     event_type: esphome.omote_command
 actions:
   - choose:
+      - conditions: "{{ trigger.event.data.device == 'sonos' }}"
+        sequence:
+          - action: media_player.volume_up
+            target:
+              entity_id: media_player.sonos
       - conditions: "{{ trigger.event.data.device == 'amplifier' }}"
         sequence:
           - action: esphome.omote_send_pronto

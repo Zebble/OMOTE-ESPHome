@@ -8,6 +8,9 @@
 # applying it is deferred until the display exists. Without that, the restored
 # value redraws the screen too early and the top layer is left blank.
 globals:
+  - id: last_role
+    type: std::string
+    restore_value: false
   - id: ui_ready
     type: bool
     restore_value: false
@@ -24,10 +27,10 @@ esphome:
 script:
   # Send a command to whichever device should receive it.
   #
-  # A button says what it does - "volume_up" - not which device it is for. This
-  # works that out from the activity, so the same button can reach different
-  # devices, and some buttons can ignore the activity: volume and mute belong to
-  # the amplifier whether the television or the streamer is playing.
+  # A button says what it does - "volume_up" - not which device it is for. Each
+  # command belongs to a role, and each activity decides which device fills each
+  # role. So volume can go to an amplifier while watching television, and to the
+  # speaker itself while streaming music, without the button knowing either.
   #
   # The command goes to Home Assistant, which decides how to deliver it - as
   # infrared through this remote, or over the network. Adding a device is a
@@ -36,25 +39,54 @@ script:
     parameters:
       function: string
     then:
+      # Work out the role first; the device depends on it.
+      - script.execute:
+          id: command_role
+          function: !lambda "return function;"
       - homeassistant.event:
           event: esphome.omote_command
           data:
             command: !lambda "return function;"
             activity: !lambda "return id(activity).current_option().str();"
+            role: !lambda "return id(last_role);"
             device: !lambda |-
-              // Sound always goes to the amplifier.
-              if (function == "volume_up" || function == "volume_down" || function == "mute")
-                return std::string("amplifier");
-              // Everything else follows the activity. Add a line per activity.
+              const std::string role = id(last_role);
               auto current = id(activity).current_option();
-              if (current == "Watch TV")
+
+              // Which device fills each role, per activity. This is the part to
+              // edit when adding an activity or moving a role to another device.
+              if (current == "Watch TV") {
+                // The amplifier is in the way of the sound, so it owns volume.
+                if (role == "volume")
+                  return std::string("amplifier");
                 return std::string("television");
-              if (current == "Listen to Music")
-                return std::string("streamer");
+              }
+              if (current == "Listen to Music") {
+                // The speaker handles its own volume, so everything goes to it.
+                return std::string("sonos");
+              }
               return std::string("");
       - logger.log:
-          format: "Command %s"
-          args: ["function.c_str()"]
+          format: "Command %s (%s)"
+          args: ["function.c_str()", "id(last_role).c_str()"]
+
+  # Work out which role a command belongs to. Roles are fixed - volume is always
+  # volume - while which device serves a role is up to the activity.
+  - id: command_role
+    parameters:
+      function: string
+    then:
+      - lambda: |-
+          if (function == "volume_up" || function == "volume_down" || function == "mute") {
+            id(last_role) = "volume";
+          } else if (function == "channel_up" || function == "channel_down") {
+            id(last_role) = "channel";
+          } else if (function == "play" || function == "stop" || function == "rewind" ||
+                     function == "fast_forward" || function == "record") {
+            id(last_role) = "transport";
+          } else {
+            id(last_role) = "navigation";
+          }
 
   # Bring the screen in line with the current activity.
   - id: apply_activity
