@@ -4,8 +4,17 @@
 # way to give a button a job is a Home Assistant automation triggered by it -
 # no rebuild needed, and it can do anything Home Assistant can.
 #
-# Handle a button here instead when it has to be fast, or has to keep working
-# when the network is down. The Volume Up example below sends IR directly.
+# Most buttons say what they do rather than which device they are for, and
+# send_command in activities.yaml works out where it should go - so volume can
+# reach the amplifier while the transport keys reach whatever is playing.
+#
+# A button that has to be fast, or keep working when the network is down, can
+# skip that and send infrared straight from the device instead:
+#
+#     on_press:
+#       - remote_transmitter.transmit_nec:
+#           address: 0x1234
+#           command: 0x78AB
 #
 # Matrix layout, by key number (row * 10 + col + 1); 1 and 12 are unused:
 #
@@ -34,84 +43,154 @@ binary_sensor:
     key_code: 33
     name: "Volume Up"
     on_press:
-      # Handled on the device so volume stays responsive and works offline.
-      # Replace with the code your equipment uses (see core/ir.yaml for learning).
-      - remote_transmitter.transmit_nec:
-            address: 0x1234
-            command: 0x78AB
+      - script.execute:
+          id: send_command
+          function: volume_up
 
   - platform: tca8418
     keypad_id: keypad
     key_code: 43
     name: "Volume Down"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: volume_down
   - platform: tca8418
     keypad_id: keypad
     key_code: 44
     name: "Mute"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: mute
   - platform: tca8418
     keypad_id: keypad
     key_code: 2
     name: "Play"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: play
   - platform: tca8418
     keypad_id: keypad
     key_code: 5
     name: "Stop"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: stop
   - platform: tca8418
     keypad_id: keypad
     key_code: 4
     name: "Rewind"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: rewind
   - platform: tca8418
     keypad_id: keypad
     key_code: 11
     name: "Fast Forward"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: fast_forward
   - platform: tca8418
     keypad_id: keypad
     key_code: 42
     name: "Channel Up"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: channel_up
   - platform: tca8418
     keypad_id: keypad
     key_code: 22
     name: "Channel Down"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: channel_down
   - platform: tca8418
     keypad_id: keypad
     key_code: 14
     name: "Up"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: up
   - platform: tca8418
     keypad_id: keypad
     key_code: 35
     name: "Down"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: down
   - platform: tca8418
     keypad_id: keypad
     key_code: 15
     name: "Left"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: left
   - platform: tca8418
     keypad_id: keypad
     key_code: 32
     name: "Right"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: right
   - platform: tca8418
     keypad_id: keypad
     key_code: 34
     name: "OK"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: ok
   - platform: tca8418
     keypad_id: keypad
     key_code: 13
     name: "Back"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: back
   - platform: tca8418
     keypad_id: keypad
     key_code: 31
     name: "Info"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: info
   - platform: tca8418
     keypad_id: keypad
     key_code: 3
     name: "Conf"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: menu
   - platform: tca8418
     keypad_id: keypad
     key_code: 41
     name: "SRC"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: source
   - platform: tca8418
     keypad_id: keypad
     key_code: 45
     name: "Record"
+    on_press:
+      - script.execute:
+          id: send_command
+          function: record
   - platform: tca8418
     keypad_id: keypad
     key_code: 21

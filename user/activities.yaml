@@ -22,6 +22,40 @@ esphome:
         - script.execute: apply_activity
 
 script:
+  # Send a command to whichever device should receive it.
+  #
+  # A button says what it does - "volume_up" - not which device it is for. This
+  # works that out from the activity, so the same button can reach different
+  # devices, and some buttons can ignore the activity: volume and mute belong to
+  # the amplifier whether the television or the streamer is playing.
+  #
+  # The command goes to Home Assistant, which decides how to deliver it - as
+  # infrared through this remote, or over the network. Adding a device is a
+  # change there, not a rebuild here.
+  - id: send_command
+    parameters:
+      function: string
+    then:
+      - homeassistant.event:
+          event: esphome.omote_command
+          data:
+            command: !lambda "return function;"
+            activity: !lambda "return id(activity).current_option().str();"
+            device: !lambda |-
+              // Sound always goes to the amplifier.
+              if (function == "volume_up" || function == "volume_down" || function == "mute")
+                return std::string("amplifier");
+              // Everything else follows the activity. Add a line per activity.
+              auto current = id(activity).current_option();
+              if (current == "Watch TV")
+                return std::string("television");
+              if (current == "Listen to Music")
+                return std::string("streamer");
+              return std::string("");
+      - logger.log:
+          format: "Command %s"
+          args: ["function.c_str()"]
+
   # Bring the screen in line with the current activity.
   - id: apply_activity
     then:

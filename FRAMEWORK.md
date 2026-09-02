@@ -67,6 +67,37 @@ or work offline - put it in `user/keymap.yaml` instead.
 2. Add a page for it in the same file.
 3. Add a branch to the page router in the select's `on_value`.
 
+## What a button does
+
+A button says what it does rather than which device it is for: the volume key
+sends `volume_up`, not "turn up the amplifier". The `send_command` script in
+`user/activities.yaml` works out where it should go, so the same button can reach
+different devices as the activity changes, and some buttons can ignore the
+activity entirely - volume and mute belong to the amplifier whether the
+television or the streamer is playing.
+
+The command then goes to Home Assistant as an `esphome.omote_command` event
+carrying the command, the device and the activity, and one automation there
+decides how to deliver it: as infrared through this remote, or over the network.
+Adding a device is a change in Home Assistant rather than a rebuild here.
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: esphome.omote_command
+actions:
+  - choose:
+      - conditions: "{{ trigger.event.data.device == 'amplifier' }}"
+        sequence:
+          - action: esphome.omote_send_pronto
+            data:
+              code: "{{ amplifier_codes[trigger.event.data.command] }}"
+```
+
+A button that has to be fast, or keep working when the network is down, can skip
+all of that and send infrared straight from the device - see the comment at the
+top of `user/keymap.yaml`.
+
 ## The screen
 
 `core/ui.yaml` owns the display, the touchscreen, and a bar drawn on top of every
@@ -77,13 +108,6 @@ press a button and read it off the screen, rather than connecting to the log.
 Pages are yours, in `user/activities.yaml`.
 
 ## To do
-
-**Route buttons per device.** Some buttons belong to a different device than the
-one the activity is nominally about: volume and mute usually belong to the
-amplifier no matter whether the TV or a streaming box is playing. Activities
-should be able to say which device each button goes to, so volume reaches the
-amplifier while the transport buttons reach whatever is playing, without
-repeating the mapping in every activity.
 
 **Repeat while a button is held.** Volume, channel and the arrow keys should be
 able to repeat while held, rather than sending one command per press, and stop on
