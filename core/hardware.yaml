@@ -140,6 +140,7 @@ remote_transmitter:
     inverted: true
   carrier_duty_percent: 50%
   use_dma: true
+  non_blocking: true
 
 remote_receiver:
   id: ir_receiver
