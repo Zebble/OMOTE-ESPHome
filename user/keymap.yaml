@@ -16,6 +16,10 @@
 #           address: 0x1234
 #           command: 0x78AB
 #
+# Volume, channel and the arrow keys repeat while held: they start
+# repeat_command (activities.yaml) on press and stop it on release. Power and
+# the other keys send once per press.
+#
 # Matrix layout, by key number (row * 10 + col + 1); 1 and 12 are unused:
 #
 #        COL0          COL1          COL2         COL3         COL4
@@ -44,8 +48,10 @@ binary_sensor:
     name: "Volume Up"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: volume_up
+    on_release:
+      - script.stop: repeat_command
 
   - platform: tca8418
     keypad_id: keypad
@@ -53,8 +59,10 @@ binary_sensor:
     name: "Volume Down"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: volume_down
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 44
@@ -101,48 +109,60 @@ binary_sensor:
     name: "Channel Up"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: channel_up
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 22
     name: "Channel Down"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: channel_down
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 14
     name: "Up"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: up
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 35
     name: "Down"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: down
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 15
     name: "Left"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: left
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 32
     name: "Right"
     on_press:
       - script.execute:
-          id: send_command
+          id: repeat_command
           function: right
+    on_release:
+      - script.stop: repeat_command
   - platform: tca8418
     keypad_id: keypad
     key_code: 34

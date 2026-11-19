@@ -70,6 +70,29 @@ script:
           format: "Command %s (%s)"
           args: ["function.c_str()", "id(last_role).c_str()"]
 
+  # Send a command, then keep sending it until the button is released (the
+  # button's on_release stops this script). Like a keyboard: one command at
+  # once, a pause so a tap stays a single step, then a steady repeat.
+  # shortcut: one repeat at a time - releasing any repeating key stops it, fine
+  # until someone needs two repeating keys held together.
+  - id: repeat_command
+    mode: restart
+    parameters:
+      function: string
+    then:
+      - script.execute:
+          id: send_command
+          function: !lambda "return function;"
+      - delay: 400ms
+      - while:
+          condition:
+            lambda: "return true;"
+          then:
+            - script.execute:
+                id: send_command
+                function: !lambda "return function;"
+            - delay: 150ms
+
   # Work out which role a command belongs to. Roles are fixed - volume is always
   # volume - while which device serves a role is up to the activity.
   - id: command_role

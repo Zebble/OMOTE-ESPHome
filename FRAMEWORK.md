@@ -123,10 +123,15 @@ press a button and read it off the screen, rather than connecting to the log.
 
 Pages are yours, in `user/activities.yaml`.
 
+## Holding a button
+
+Volume, channel and the arrow keys repeat while held: one command straight
+away, a 400 ms pause so a tap stays a single step, then one every 150 ms until
+release. Which keys repeat is set per button in `user/keymap.yaml` - use
+`repeat_command` instead of `send_command`, and stop it in `on_release`.
+
 ## To do
 
-**Repeat while a button is held.** Volume, channel and the arrow keys should be
-able to repeat while held, rather than sending one command per press, and stop on
-release. It should be per button, since a button like power must never repeat.
-Physical buttons report press and release separately, so the repeat can be driven
-from those; on-screen buttons have their own repeat setting.
+**Repeat on-screen buttons while held.** Physical volume, channel and arrow
+keys already repeat (see `repeat_command` in `user/activities.yaml`); the
+on-screen buttons should too, once they send real commands.
